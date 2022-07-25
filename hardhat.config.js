@@ -1,6 +1,26 @@
 require("dotenv").config();
 require("@nomicfoundation/hardhat-toolbox");
 
+task('tx', 'get transaction and receipt')
+.addParam("txid", "Transaction hash")
+.setAction(async ({ txid }) => {
+  const tx = await hre.ethers.provider.getTransaction(txid);
+  const rc = await hre.ethers.provider.getTransactionReceipt(txid);
+  console.log(tx);
+  console.log(rc);
+});
+
+task('history', 'get block gas and base fee history')
+.addOptionalParam("start", "Start block", "0")
+.addOptionalParam("end", "End block", "100")
+.setAction(async ({ start, end }) => {
+  console.log("num,block_gas,base_fee");
+  for (var i=start; i<=end; i++) {
+    const block = await hre.ethers.provider.getBlock(parseInt(i));
+    console.log(`${block.number}, ${block.gasUsed}, ${block.baseFeePerGas}`);
+  }
+});
+
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
   solidity: {

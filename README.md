@@ -1,13 +1,44 @@
-# Sample Hardhat Project
+# BaseFee test
 
-This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, and a script that deploys that contract.
+## Setup
 
-Try running some of the following tasks:
+### Start a local network
 
-```shell
-npx hardhat help
-npx hardhat test
-GAS_REPORT=true npx hardhat test
-npx hardhat node
-npx hardhat run scripts/deploy.js
 ```
+./homi setup --cn-num 1 --baobab-test --docker-image-id klaytn/klaytn:v1.9.0-rc.3
+cd homi-output
+docker-compose up -d
+```
+
+### Give money to test account
+
+```
+docker-compose exec CN-0 kcn attach klaytn/klay.ipc
+klay.sendTransaction({from: personal.listAccounts[0], to: '0xaB36568200B0f2B262107e4E74C68d6E8729Da39', value: 1000e18})
+```
+
+### Deploy GasBurner contract
+
+```
+export HARDHAT_NETWORK=local
+node scripts/deploy.js
+```
+
+Then modify `.env` file
+
+```
+LOCAL_GASBURNER_ADDR=0x...
+```
+
+### Send many transactions
+
+```
+node scripts/consume.js
+```
+
+### See BaseFee history
+
+```
+hh history --start 100 --end 200
+```
+

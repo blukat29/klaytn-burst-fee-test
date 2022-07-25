@@ -7,6 +7,10 @@
 const hre = require("hardhat");
 
 async function main() {
+  const accounts = await hre.ethers.getSigners();
+  const sender = accounts[0];
+  console.log('Deploying from', sender.address);
+
   const Burner = await hre.ethers.getContractFactory("GasBurner");
   const burner = await Burner.deploy();
 
