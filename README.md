@@ -14,7 +14,7 @@ docker-compose up -d
 
 ```
 docker-compose exec CN-0 kcn attach klaytn/klay.ipc
-klay.sendTransaction({from: personal.listAccounts[0], to: '0xaB36568200B0f2B262107e4E74C68d6E8729Da39', value: 1000e18})
+klay.sendTransaction({from: personal.listAccounts[0], to: '0xaB36568200B0f2B262107e4E74C68d6E8729Da39', value: 1e24})
 ```
 
 ### Deploy GasBurner contract
@@ -24,7 +24,7 @@ export HARDHAT_NETWORK=local
 node scripts/deploy.js
 ```
 
-Then modify `.env` file
+Then modify `.env` file accordingly
 
 ```
 LOCAL_GASBURNER_ADDR=0x...
@@ -38,7 +38,13 @@ node scripts/consume.js
 
 ### See BaseFee history
 
+See current stats
 ```
-hh history --start 100 --end 200
+npx hardhat history --start latest --follow
+```
+
+See specific range
+```
+npx hardhat history --start 100 --end 200
 ```
 

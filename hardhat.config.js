@@ -50,7 +50,7 @@ module.exports = {
         settings: { optimizer: { enabled: true, runs: 1000 } } },
     ],
   },
-  defaultNetwork: 'hardhat',
+  defaultNetwork: 'local',
   networks: {
     'hardhat': {},
     'local': {

@@ -10,6 +10,7 @@ async function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+// Send a transaction that consumes at least `gas`.
 async function consumeOnce(burner, gas, nonce) {
   // 10    iter = 47183     gas
   // 1000  iter = 1844033   gas
@@ -17,12 +18,18 @@ async function consumeOnce(burner, gas, nonce) {
   // 8000  iter = 14549033  gas
   // 8300+ iter = 100000000 gas (ErrOpcodeComputationCostLimitReached)
   // (gas = 29033 + 1815*iter)
-  // (iter = (gas - 29033) / 1815)
+  var iter = Math.ceil((gas - 29033) / 1815);
 
-  var iter = Math.floor((gas - 29033) / 1815);
+  // If `iter` is larger than certain value, gasUsed = gasLimit.
+  // In that case we control the gasUsed using gasLimit.
+  var gasLimit = 1e7;
+  if (iter > 8000) {
+    gasLimit = gas;
+  }
+
   const tx = await burner.consume(iter, {
     gasPrice: 750e9,
-    gasLimit: 1e7,
+    gasLimit: gasLimit,
     nonce: nonce,
   });
 
@@ -33,27 +40,40 @@ async function consumeOnce(burner, gas, nonce) {
   return tx;
 }
 
-async function consumeBurst(burner, gas, nonce, txPerBlock, numBlocks) {
-  for (var i = 0; i < numBlocks; i++) {
+async function consumeBurst(burner, gas, nonce, count) {
+  for (var i = 0; i < count; i++) {
     var now = Date.now();
-    await sleep(1000 - (now % 1000)); // loop every second
+    await sleep(1500 - (now % 1000)); // start the loop at exactly X.5 sec.
 
-    for (var j = 0; j < txPerBlock; j++) {
-      consumeOnce(burner, gas, nonce);
-      nonce++
+    if (gas == "random") {
+      randomGas = Math.floor(Math.random() * 5e7) + 1e7;
+      consumeOnce(burner, randomGas, nonce + i);
+    } else {
+      consumeOnce(burner, gas, nonce + i);
     }
   }
 }
 
 async function consumePattern(burner, nonce) {
   var bursts = [
-    { gas: 1e7, txPerBlock: 3, numBlocks: 10 },
+    { gas: 1e5, count: 4 }, // warmup
+    // max change rate
+    { gas: 9e7, count: 100 },
+    { gas: 1e5, count: 100 },
+    { gas: 6e7, count: 100 },
+    { gas: 1e5, count: 100 },
+    // slow change rate
+    { gas: 4e7, count: 100 },
+    { gas: 2e7, count: 100 },
+    // random walk
+    { gas: 6e7, count: 50 },
+    { gas: "random", count: 100 },
   ];
 
   for (var i = 0; i < bursts.length; i++) {
     var burst = bursts[i];
-    await consumeBurst(burner, burst.gas, nonce, burst.txPerBlock, burst.numBlocks);
-    nonce += burst.txPerBlock * burst.numBlocks;
+    await consumeBurst(burner, burst.gas, nonce, burst.count);
+    nonce += burst.count;
   }
 }
 
