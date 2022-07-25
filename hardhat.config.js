@@ -1,8 +1,13 @@
 require("dotenv").config();
 require("@nomicfoundation/hardhat-toolbox");
 
+async function sleep(ms) {
+  if (ms <= 0) return;
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 task('tx', 'get transaction and receipt')
-.addParam("txid", "Transaction hash")
+.addPositionalParam("txid", "Transaction hash")
 .setAction(async ({ txid }) => {
   const tx = await hre.ethers.provider.getTransaction(txid);
   const rc = await hre.ethers.provider.getTransactionReceipt(txid);
@@ -11,13 +16,29 @@ task('tx', 'get transaction and receipt')
 });
 
 task('history', 'get block gas and base fee history')
-.addOptionalParam("start", "Start block", "0")
-.addOptionalParam("end", "End block", "100")
-.setAction(async ({ start, end }) => {
-  console.log("num,block_gas,base_fee");
-  for (var i=start; i<=end; i++) {
-    const block = await hre.ethers.provider.getBlock(parseInt(i));
-    console.log(`${block.number}, ${block.gasUsed}, ${block.baseFeePerGas}`);
+.addOptionalParam("start", "Start block number (default: 0)", "0")
+.addOptionalParam("end", "End block number (default: latest)", "latest")
+.addFlag("follow", "Follow latest block indefinitely")
+.setAction(async ({ start, end, follow }) => {
+
+  const headNum = parseInt(await hre.ethers.provider.getBlockNumber());
+  start = (start == "latest") ? headNum : parseInt(start);
+  end = (end == "latest") ? headNum : parseInt(end);
+
+  console.log("num,base_fee,block_gas,tx_count");
+
+  for (var num = start; num <= end; num++) {
+    const block = await hre.ethers.provider.getBlock(parseInt(num));
+    console.log(`${block.number}, ${block.baseFeePerGas}, ${block.gasUsed}, ${block.transactions.length}`);
+  }
+
+  var clock = Date.now();
+  while (follow) {
+    clock += 1000;
+    await sleep(clock - Date.now());
+
+    const block = await hre.ethers.provider.getBlock("latest");
+    console.log(`${block.number}, ${block.baseFeePerGas}, ${block.gasUsed}, ${block.transactions.length}`);
   }
 });
 

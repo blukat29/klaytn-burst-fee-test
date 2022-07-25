@@ -10,25 +10,51 @@ async function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function consume(burner, gas, nonce) {
-  // 10   iter = 47183   gas
-  // 1000 iter = 1844033 gas
-  // 2000 iter = 3659033 gas
+async function consumeOnce(burner, gas, nonce) {
+  // 10    iter = 47183     gas
+  // 1000  iter = 1844033   gas
+  // 2000  iter = 3659033   gas
+  // 8000  iter = 14549033  gas
+  // 8300+ iter = 100000000 gas (ErrOpcodeComputationCostLimitReached)
   // (gas = 29033 + 1815*iter)
   // (iter = (gas - 29033) / 1815)
 
   var iter = Math.floor((gas - 29033) / 1815);
   const tx = await burner.consume(iter, {
     gasPrice: 750e9,
-    gasLimit: 9e6,
+    gasLimit: 1e7,
     nonce: nonce,
   });
-  console.log(`SENT [${Date.now()/1000}] #${nonce || ''} ${tx.hash} gas ${gas}`);
-  return tx;
-  // const rc = await tx.wait();
-  // console.log(rc);
 
-  // console.log(`TX ${tx.hash} at block ${rc.blockNumber} gas ${rc.gasUsed}`);
+  var now = (Date.now()/1000).toString().padEnd(14,'0');
+  var txNonce = (nonce || tx.nonce).toString().padStart(3,' ');
+  console.log(`SENT [${now}] #${nonce} ${tx.hash} gas ${gas} iter ${iter}`);
+  // fire-and-forget. do not wait for receipt.
+  return tx;
+}
+
+async function consumeBurst(burner, gas, nonce, txPerBlock, numBlocks) {
+  for (var i = 0; i < numBlocks; i++) {
+    var now = Date.now();
+    await sleep(1000 - (now % 1000)); // loop every second
+
+    for (var j = 0; j < txPerBlock; j++) {
+      consumeOnce(burner, gas, nonce);
+      nonce++
+    }
+  }
+}
+
+async function consumePattern(burner, nonce) {
+  var bursts = [
+    { gas: 1e7, txPerBlock: 3, numBlocks: 10 },
+  ];
+
+  for (var i = 0; i < bursts.length; i++) {
+    var burst = bursts[i];
+    await consumeBurst(burner, burst.gas, nonce, burst.txPerBlock, burst.numBlocks);
+    nonce += burst.txPerBlock * burst.numBlocks;
+  }
 }
 
 async function main() {
@@ -47,13 +73,7 @@ async function main() {
   console.log(`block: ${num}`);
   console.log(`>>> STARTING\n`);
 
-  promises = [];
-  for (var i=0; i<10; i++) {
-    var now = Date.now();
-    await sleep(1000 - (now % 1000));
-    promises.push(consume(burner, 1e5, nonce + i));
-  }
-  await Promise.all(promises);
+  await consumePattern(burner, nonce);
 
   num = await hre.ethers.provider.getBlockNumber();
   console.log(`\n<<< ENDED`);
