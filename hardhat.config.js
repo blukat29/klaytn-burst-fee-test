@@ -59,7 +59,7 @@ module.exports = {
       accounts: [
         process.env.LOCAL_ACCOUNT_KEY || '0x00000000000000000000000000000000000000000000000000000000cafebabe',
       ],
-      gasburner: process.env.LOCAL_GASBURNER_ADDR,
+      gasburner: process.env.LOCAL_GASBURNER_ADDR || '0x97557699C3cb0D08a07923c713333e785d3b9A66',
     },
     'baobab': {
       url: "https://api.baobab.klaytn.net:8651",
